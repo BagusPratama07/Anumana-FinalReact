@@ -83,7 +83,7 @@ const parseSafeDate = (dateStr) => {
   return new Date();
 };
 
-// SAFE CSV SPLITTER (Handles commas inside quotes)
+// SAFE CSV SPLITTER
 const safeSplitCSV = (line, delimiter) => {
   if (delimiter === ";") return line.split(";");
   const regex = /(?:,|\n|^)("(?:(?:"")*[^"]*)*"|[^",\n]*|(?:\n|$))/g;
@@ -128,7 +128,6 @@ export default function App() {
   const [historyMonth, setHistoryMonth] = useState("All");
   const [selectedArea, setSelectedArea] = useState("All PIT");
 
-  // 1. Initial Load from Google Sheets
   useEffect(() => {
     const initApp = async () => {
       setLoading(true);
@@ -145,7 +144,6 @@ export default function App() {
         setHazards(hData);
         setObservations(oData);
 
-        // Verifikasi sesi login dinamis (Hanya dari Spreadsheet)
         if (sessionEmail) {
           const emailLower = sessionEmail.toLowerCase();
           const foundUser = wData.find((u) => u.email === emailLower);
@@ -164,7 +162,6 @@ export default function App() {
     initApp();
   }, [sessionEmail]);
 
-  // 3. PIMS V10 - 5 PARAMETERS ENGINE (M1 to M5)
   const analytics = useMemo(() => {
     const filteredIncidents = selectedArea === "All PIT" ? incidents : incidents.filter((i) => i.pit === selectedArea);
     const filteredHazards = selectedArea === "All PIT" ? hazards : hazards.filter((h) => h.pit === selectedArea);
@@ -316,7 +313,6 @@ export default function App() {
     };
   }, [incidents, hazards, observations, selectedArea]);
 
-  // HISTORICAL LOGS
   const historicalLogs = useMemo(() => {
     let data = selectedArea === "All PIT" ? incidents : incidents.filter((i) => i.pit === selectedArea);
     const hazardDataFiltered = selectedArea === "All PIT" ? hazards : hazards.filter((h) => h.pit === selectedArea);
@@ -439,13 +435,11 @@ export default function App() {
     return "LOW";
   };
 
-  // --- ACTIONS ---
   const handleLogin = (e) => {
     e.preventDefault();
     setAuthError("");
     const emailLower = emailInput.toLowerCase();
 
-    // Hanya mencari di data Whitelist dari Spreadsheet
     const foundUser = whitelist.find((u) => u.email === emailLower);
 
     if (foundUser && String(foundUser.password) === String(passwordInput)) {
@@ -464,7 +458,6 @@ export default function App() {
     setView("dashboard");
   };
 
-  // CSV UPLOAD HANDLER
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -520,8 +513,22 @@ export default function App() {
             if (rawDate && rawDate.includes(" ")) rawDate = rawDate.split(" ")[0];
 
             if (pit && rawDate) {
+              // LOGIKA ANTI DOUBLING HAZARD
+              const deterministicId = `hz_${rawDate}_${pit}_${jenis}_${lokasi}`.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+              const existingData = hazards.find(h => h.id === deterministicId);
+
+              if (existingData) {
+                if (existingData.status?.toLowerCase() !== status?.toLowerCase()) {
+                  validRecords.push({
+                    id: deterministicId, pit, judul, date: rawDate,
+                    jenis, resiko, lokasi, subLokasi, status, timestamp: Date.now(), type: "hazard",
+                  });
+                }
+                return; // Abaikan jika sama persis
+              }
+
               validRecords.push({
-                id: `hz_${Date.now()}_${Math.random()}`, pit, judul, date: rawDate,
+                id: deterministicId, pit, judul, date: rawDate,
                 jenis, resiko, lokasi, subLokasi, status, timestamp: Date.now(), type: "hazard",
               });
             }
@@ -552,8 +559,14 @@ export default function App() {
             if (rawDate && rawDate.includes(" ")) rawDate = rawDate.split(" ")[0];
 
             if (pit && rawDate) {
+              // LOGIKA ANTI DOUBLING OBSERVASI
+              const deterministicId = `ob_${rawDate}_${pit}_${pelapor}_${subLokasi}`.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+              const existingData = observations.find(o => o.id === deterministicId);
+
+              if (existingData) return; // Abaikan jika sama persis
+
               validRecords.push({
-                id: `ob_${Date.now()}_${Math.random()}`, pit, date: rawDate,
+                id: deterministicId, pit, date: rawDate,
                 subLokasi, temuan, pelapor, timestamp: Date.now(), type: "observasi",
               });
             }
@@ -575,19 +588,30 @@ export default function App() {
         }
 
         if (validRecords.length > 0) {
-          setImportStatus(`Menyimpan ${validRecords.length} record ke Spreadsheet (harap tunggu)...`);
+          setImportStatus(`Menyimpan ${validRecords.length} record ter-update ke Spreadsheet...`);
           const targetSheet = importType === "incident" ? "incidents" : importType === "hazard" ? "hazards" : "observations";
 
-          if (importType === "hazard") setHazards((prev) => [...prev, ...validRecords]);
-          else if (importType === "observasi") setObservations((prev) => [...prev, ...validRecords]);
-          else setIncidents((prev) => [...prev, ...validRecords].sort((a, b) => parseSafeDate(b.date).getTime() - parseSafeDate(a.date).getTime()));
+          // UPDATE LAYAR UI AGAR TIDAK TUMPNANG TINDIH
+          if (importType === "hazard") {
+            setHazards((prev) => {
+              const newIds = validRecords.map(r => r.id);
+              return [...prev.filter(p => !newIds.includes(p.id)), ...validRecords];
+            });
+          } else if (importType === "observasi") {
+            setObservations((prev) => {
+              const newIds = validRecords.map(r => r.id);
+              return [...prev.filter(p => !newIds.includes(p.id)), ...validRecords];
+            });
+          } else {
+            setIncidents((prev) => [...prev, ...validRecords].sort((a, b) => parseSafeDate(b.date).getTime() - parseSafeDate(a.date).getTime()));
+          }
 
           await appendSheetData(targetSheet, validRecords);
 
-          setImportStatus(`Sukses: ${validRecords.length} data tersimpan di Spreadsheet!`);
+          setImportStatus(`Sukses: ${validRecords.length} data ter-update di Spreadsheet!`);
           setTimeout(() => { setIsImportModalOpen(false); setImportStatus(""); }, 2000);
         } else {
-          setImportStatus("Format salah atau Data tidak cocok.");
+          setImportStatus("Semua data sudah ada (Tidak ada yang di-update).");
         }
       } catch (err) {
         setImportStatus(`Gagal: ${err.message.slice(0, 30)}...`);
