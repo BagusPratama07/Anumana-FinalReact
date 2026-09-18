@@ -503,45 +503,59 @@ useEffect(() => {
         let validRecords = [];
 
         if (importType === "hazard") {
+          // Normalisasi header menjadi huruf kecil semua untuk pencarian presisi
           const headers = header.split(delimiter).map((h) => h.trim().toLowerCase());
-          const idxDept = headers.findIndex((h) => h.includes("departemen pelapor") || h.includes("department pelapor"));
-          const idxCompany = headers.findIndex((h) => h.includes("perusahaan pelapor"));
+          
+          // Pencarian indeks berdasarkan struktur kolom terbaru
+          const idxHazardId = headers.findIndex((h) => h === "hazard id");
+          const idxCompany = headers.findIndex((h) => h === "perusahaan pelapor");
           const idxType = headers.findIndex((h) => h.includes("jenis temuan"));
-          const idxRisk = headers.findIndex((h) => h.includes("resiko") || h.includes("risiko"));
-          const idxLoc = headers.findIndex((h) => h === "lokasi laporan" || h.includes("lokasi"));
+          const idxRisk = headers.findIndex((h) => h === "resiko temuan");
+          const idxDate = headers.findIndex((h) => h === "tanggal laporan");
+          const idxLoc = headers.findIndex((h) => h === "lokasi laporan");
           const idxSubLoc = headers.findIndex((h) => h.includes("sub lokasi"));
-          const idxStatus = headers.findIndex((h) => h.includes("status laporan") || h === "status");
-          const idxDate = headers.findIndex((h) => h.includes("tanggal laporan"));
-          const idxJudul = headers.findIndex((h) => h.includes("judul laporan") || h.includes("deskripsi"));
+          const idxStatus = headers.findIndex((h) => h === "status laporan");
+          const idxJudul = headers.findIndex((h) => h === "judul laporan");
 
           rows.forEach((line) => {
-            const cols = line.split(delimiter);
+            const cols = safeSplitCSV(line, delimiter);
             if (cols.length < 5) return;
 
-            const company = cols[idxCompany]?.trim();
-            if (!company || company.toLowerCase() !== "pt cipta kridatama") return;
+            // 1. Filter Perusahaan: Membaca "pt cipta kridatama" dari kolom Perusahaan Pelapor
+            const company = cols[idxCompany]?.trim().toLowerCase();
+            if (!company || !company.includes("cipta")) return;
 
-            const rawDept = cols[idxDept]?.trim();
-            let pit = "";
-            if (rawDept && rawDept.toLowerCase().includes("girimulya")) pit = "GRB";
-            else if (rawDept && rawDept.toLowerCase().includes("kusan")) pit = "KSB";
-            else return;
+            // 2. Deteksi Area PIT: Mencari GRB, KSB, dan tambahan KGB dari Lokasi Laporan
+            const lokasi = cols[idxLoc]?.trim();
+            let pit = "All PIT"; 
+            if (lokasi) {
+              const locLower = lokasi.toLowerCase();
+              if (locLower.includes("grb") || locLower.includes("girimulya")) pit = "GRB";
+              else if (locLower.includes("ksb") || locLower.includes("kusan")) pit = "KSB";
+              else if (locLower.includes("kgb")) pit = "KGB";
+            }
 
+            // 3. Ekstraksi Nilai Tambahan
             const jenis = cols[idxType]?.trim();
             const resiko = cols[idxRisk]?.trim();
-            const lokasi = cols[idxLoc]?.trim();
             const subLokasi = cols[idxSubLoc]?.trim();
-            const status = cols[idxStatus]?.trim();
-            const judul = cols[idxJudul]?.trim() || `Hazard Report`;
+            const status = cols[idxStatus]?.trim(); // Mengambil dari 'Status Laporan', bukan kolom 'Status' paling akhir
+            const judul = cols[idxJudul]?.trim() || "Hazard Report";
             let rawDate = cols[idxDate]?.trim();
 
+            // Memotong jam dari tanggal (Contoh: "2026-09-01 02:51:00" menjadi "2026-09-01")
             if (rawDate && rawDate.includes(" ")) rawDate = rawDate.split(" ")[0];
 
             if (pit && rawDate) {
-              // LOGIKA ANTI DOUBLING HAZARD
-              const deterministicId = `hz_${rawDate}_${pit}_${jenis}_${lokasi}`.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+              // 4. Pembentukan Primary Key Menggunakan Hazard ID Asli
+              const rawHazardId = cols[idxHazardId]?.trim();
+              const deterministicId = rawHazardId 
+                ? `hz_${rawHazardId}`.replace(/[^a-zA-Z0-9_]/g, "").toLowerCase()
+                : `hz_${rawDate}_${pit}_${jenis}_${lokasi}`.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+
               const existingData = hazards.find(h => h.id === deterministicId);
 
+              // 5. Logika Upsert: Abaikan jika data sama persis, update jika status berubah
               if (existingData) {
                 if (existingData.status?.toLowerCase() !== status?.toLowerCase()) {
                   validRecords.push({
@@ -549,9 +563,10 @@ useEffect(() => {
                     jenis, resiko, lokasi, subLokasi, status, timestamp: Date.now(), type: "hazard",
                   });
                 }
-                return; // Abaikan jika sama persis
+                return;
               }
 
+              // Input data baru jika Hazard ID belum pernah ada
               validRecords.push({
                 id: deterministicId, pit, judul, date: rawDate,
                 jenis, resiko, lokasi, subLokasi, status, timestamp: Date.now(), type: "hazard",
