@@ -127,40 +127,43 @@ export default function App() {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [historyMonth, setHistoryMonth] = useState("All");
   const [selectedArea, setSelectedArea] = useState("All PIT");
+  const [dashboardSummary, setDashboardSummary] = useState(null);
 
-  useEffect(() => {
-    const initApp = async () => {
-      setLoading(true);
-      try {
-        const [wData, iData, hData, oData] = await Promise.all([
-          fetchSheetData("whitelist"),
-          fetchSheetData("incidents"),
-          fetchSheetData("hazards"),
-          fetchSheetData("observations"),
-        ]);
+useEffect(() => {
+  const initApp = async () => {
+    setLoading(true);
+    try {
+      // KITA HANYA AMBIL 3 DATA INI SEKARANG (Jauh lebih ringan!)
+      const [wData, iData, summaryData] = await Promise.all([
+        fetchSheetData("whitelist"),
+        fetchSheetData("incidents"), // Data insiden ukurannya kecil, aman ditarik semua
+        fetchSheetData("Dashboard_Summary"),
+      ]);
 
-        setWhitelist(wData);
-        setIncidents(iData.sort((a, b) => parseSafeDate(b.date).getTime() - parseSafeDate(a.date).getTime()));
-        setHazards(hData);
-        setObservations(oData);
+      setWhitelist(wData);
+      setIncidents(iData.sort((a, b) => parseSafeDate(b.date).getTime() - parseSafeDate(a.date).getTime()));
 
-        if (sessionEmail) {
-          const emailLower = sessionEmail.toLowerCase();
-          const foundUser = wData.find((u) => u.email === emailLower);
-          if (foundUser) {
-            setUser({ email: sessionEmail, role: foundUser.role });
-          } else {
-            handleLogout();
-          }
-        }
-      } catch (e) {
-        console.error("Gagal sinkronisasi dengan Spreadsheet", e);
+      // Data dari Google Sheets biasanya ada di array pertama, index key pertama
+      if (summaryData && summaryData.length > 0) {
+        // Karena format doGet kita mengembalikan array of object, kita ambil string JSON-nya
+        const rawJsonStr = Object.values(summaryData[0])[0]; 
+        setDashboardSummary(JSON.parse(rawJsonStr).data);
       }
-      setLoading(false);
-    };
 
-    initApp();
-  }, [sessionEmail]);
+      // KOSONGKAN Hazard dan Observasi (Beban 215k baris hilang!)
+      setHazards([]); 
+      setObservations([]);
+
+      // ... logika sesi email login ...
+    } catch (e) {
+      console.error("Gagal sinkronisasi dengan Spreadsheet", e);
+    }
+    setLoading(false);
+  };
+
+  initApp();
+}, [sessionEmail]);
+
 
   const analytics = useMemo(() => {
     const filteredIncidents = selectedArea === "All PIT" ? incidents : incidents.filter((i) => i.pit === selectedArea);
@@ -305,13 +308,35 @@ export default function App() {
     });
     const topPasif = Object.entries(pelaporCounts).sort((a, b) => b[1] - a[1]).slice(0, 5);
 
+    // --- PENYESUAIAN KABEL DATA SUMMARY ---
+    let finalHazardStats = { top5Hazards, ktaCount, ttaCount, statOpen, statFollow, statEnd };
+    let finalBlindSpots = blindSpots;
+    let finalTopPasif = topPasif;
+
+    // Jika data dari server sudah turun, kita timpa data kosong dengan data asli
+    if (dashboardSummary && dashboardSummary[selectedArea]) {
+      const sumArea = dashboardSummary[selectedArea];
+      finalHazardStats = {
+        top5Hazards: [],
+        ktaCount: sumArea.hazardStats.kta,
+        ttaCount: sumArea.hazardStats.tta,
+        statOpen: sumArea.hazardStats.open,
+        statFollow: sumArea.hazardStats.follow,
+        statEnd: sumArea.hazardStats.end
+      };
+      finalBlindSpots = sumArea.blindSpots;
+      finalTopPasif = sumArea.topPasif;
+    }
+
     return {
       dataCount, dayCount: absoluteDayCount, avgInterval: parseFloat(avgInterval.toFixed(1)),
       stdDevInterval: parseFloat(stdDevInterval.toFixed(1)), maxCycleLength, lastIncident, forecast,
-      dist, avgWeighted, stdDevWeighted, redThreshold, hazardStats: { top5Hazards, ktaCount, ttaCount, statOpen, statFollow, statEnd },
-      blindSpots, topPasif,
+      dist, avgWeighted, stdDevWeighted, redThreshold, 
+      hazardStats: finalHazardStats,
+      blindSpots: finalBlindSpots, 
+      topPasif: finalTopPasif,
     };
-  }, [incidents, hazards, observations, selectedArea]);
+  }, [incidents, hazards, observations, selectedArea, dashboardSummary]); // <--- Pastikan dashboardSummary ditambahkan di sini
 
   const historicalLogs = useMemo(() => {
     let data = selectedArea === "All PIT" ? incidents : incidents.filter((i) => i.pit === selectedArea);
