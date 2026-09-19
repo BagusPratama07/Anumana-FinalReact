@@ -525,14 +525,14 @@ useEffect(() => {
             const company = cols[idxCompany]?.trim().toLowerCase();
             if (!company || !company.includes("cipta")) return;
 
-            // 2. Deteksi Area PIT: Mencari GRB, KSB, dan tambahan KGB dari Lokasi Laporan
+            // 2. Deteksi Area PIT: Memasukkan KGB ke dalam keranjang KSB
             const lokasi = cols[idxLoc]?.trim();
             let pit = "All PIT"; 
             if (lokasi) {
               const locLower = lokasi.toLowerCase();
-              if (locLower.includes("grb") || locLower.includes("girimulya")) pit = "GRB";
-              else if (locLower.includes("ksb") || locLower.includes("kusan")) pit = "KSB";
-              else if (locLower.includes("kgb")) pit = "KGB";
+              if (locLower.includes("grb") || locLower.includes("girimulya")) {pit = "GRB";}
+              // Tambahkan "kgb" di baris ini agar diakui sebagai KSB
+              else if (locLower.includes("ksb") || locLower.includes("kusan") || locLower.includes("kgb")) {pit = "KSB";}
             }
 
             // 3. Ekstraksi Nilai Tambahan
