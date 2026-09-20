@@ -87,12 +87,8 @@ useEffect(() => {
 
   const { analytics, historicalLogs } = useAnalytics({
     incidents, hazards, observations, selectedArea, dashboardSummary, historyMonth
-  }); [incidents, hazards, observations, selectedArea, dashboardSummary]; // <--- Pastikan dashboardSummary ditambahkan di sini
-
-  const { analytics, historicalLogs } = useAnalytics({
-    incidents, hazards, observations, selectedArea, dashboardSummary, historyMonth
   });
-  
+
   const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
 
   const getBarColor = (weight, avg, redThreshold) => {
