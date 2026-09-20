@@ -17,7 +17,7 @@ import {
 } from "./utils/helpers";
 import ImportModal from "./components/ImportModal";
 import EntryModal from "./components/EntryModal";
-import Login from "./components/Login";
+import Login from "./components/LoginSatu";
 
 export default function App() {
   const [user, setUser] = useState(null);
