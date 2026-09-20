@@ -15,7 +15,7 @@ import {
   SEVERITY_WEIGHTS, SEVERITY_NORM, HAZARD_RISK_W, HAZARD_STATUS_W, HAZARD_TYPE_W,
   fetchSheetData, appendSheetData, parseSafeDate, safeSplitCSV
 } from "./utils/helpers";
-
+import ImportModal from "./components/ImportModal";
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -981,32 +981,15 @@ useEffect(() => {
       )}
 
       {isImportModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/90 backdrop-blur-md z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-[3rem] w-full max-w-md p-10 text-center shadow-2xl animate-in zoom-in-95">
-            <div className="bg-slate-900 w-20 h-20 rounded-[2rem] flex items-center justify-center mx-auto mb-8 shadow-xl"><FileText className="text-amber-400 w-10 h-10" /></div>
-            <h3 className="text-2xl font-black uppercase text-slate-800 mb-2">Import CSV Data</h3>
-            <p className="text-xs text-slate-400 mb-6 font-medium italic">Pilih jenis data yang akan diunggah</p>
-            <div className="flex justify-center gap-3 mb-8 flex-wrap">
-              <label className={`cursor-pointer flex items-center gap-2 text-[10px] font-black uppercase tracking-widest px-4 py-3 rounded-2xl transition-all ${importType === "incident" ? "bg-slate-900 text-white shadow-lg" : "bg-slate-100 text-slate-400 hover:bg-slate-200"}`}>
-                <input type="radio" name="importType" value="incident" checked={importType === "incident"} onChange={() => setImportType("incident")} className="hidden" />Insiden
-              </label>
-              <label className={`cursor-pointer flex items-center gap-2 text-[10px] font-black uppercase tracking-widest px-4 py-3 rounded-2xl transition-all ${importType === "hazard" ? "bg-amber-500 text-slate-900 shadow-lg" : "bg-slate-100 text-slate-400 hover:bg-slate-200"}`}>
-                <input type="radio" name="importType" value="hazard" checked={importType === "hazard"} onChange={() => setImportType("hazard")} className="hidden" />Hazard
-              </label>
-              <label className={`cursor-pointer flex items-center gap-2 text-[10px] font-black uppercase tracking-widest px-4 py-3 rounded-2xl transition-all ${importType === "observasi" ? "bg-indigo-500 text-white shadow-lg" : "bg-slate-100 text-slate-400 hover:bg-slate-200"}`}>
-                <input type="radio" name="importType" value="observasi" checked={importType === "observasi"} onChange={() => setImportType("observasi")} className="hidden" />Observasi
-              </label>
-            </div>
-            <div className="relative border-4 border-dashed border-slate-100 rounded-[2.5rem] p-12 hover:border-indigo-400 bg-slate-50 group transition-all">
-              <input type="file" accept=".csv" onChange={handleFileUpload} className="absolute inset-0 opacity-0 cursor-pointer z-10" />
-              <Upload className="w-10 h-10 text-slate-300 mx-auto mb-4 group-hover:text-indigo-600 group-hover:scale-110 transition-all" />
-              <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{importStatus || "Pilih File .CSV Anda"}</p>
-            </div>
-            <button onClick={() => { setIsImportModalOpen(false); setImportStatus(""); }} className="mt-10 text-[10px] font-black text-slate-400 uppercase hover:text-rose-600 transition-colors tracking-widest outline-none">Tutup Panel</button>
-          </div>
-        </div>
+        <ImportModal 
+          onClose={() => { setIsImportModalOpen(false); setImportStatus(""); }}
+          importType={importType}
+          setImportType={setImportType}
+          handleFileUpload={handleFileUpload}
+          importStatus={importStatus}
+        />
       )}
-
+      
       {isEntryModalOpen && (
         <div className="fixed inset-0 bg-slate-900/90 backdrop-blur-md z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-[3rem] w-full max-w-lg shadow-2xl overflow-hidden animate-in slide-in-from-bottom-8">
