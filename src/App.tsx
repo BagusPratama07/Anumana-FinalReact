@@ -990,6 +990,12 @@ useEffect(() => {
           importStatus={importStatus}
         />
       )}      
+      {isEntryModalOpen && (
+        <EntryModal 
+          onClose={() => setIsEntryModalOpen(false)} 
+          submitManual={submitManual} 
+        />
+      )}
     </div>
   );
 }
