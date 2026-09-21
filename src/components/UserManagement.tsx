@@ -13,10 +13,13 @@ export default function UserManagement({
 }) {
   return (
     <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 p-10 animate-in slide-in-from-bottom-4">
+      {/* HEADER BAGIAN MANAJEMEN USER */}
       <h3 className="text-xl font-black mb-10 flex items-center gap-4 text-slate-800 uppercase tracking-tight">
         <Users className="text-indigo-600 w-8 h-8" /> Whitelist Akses Tim
       </h3>
       
+      {/* FORM TAMBAH PENGGUNA BARU */}
+      {/* Bagian ini membungkus input email, password default, dan tombol tambah */}
       <div className="flex flex-col sm:flex-row gap-4 mb-10 pb-10 border-b border-slate-50">
         <input 
           type="email" 
@@ -39,10 +42,13 @@ export default function UserManagement({
         </button>
       </div>
       
+      {/* DAFTAR PENGGUNA YANG SUDAH TERDAFTAR */}
+      {/* Melakukan perulangan (mapping) dari state whitelist untuk menampilkan daftar email */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         {whitelist.map((item, index) => (
           <div key={index} className="bg-slate-50 p-8 rounded-[2rem] flex items-center justify-between shadow-sm group hover:border-slate-300 transition-all border border-transparent">
             <span className="text-sm font-black text-slate-700 truncate">{item.email}</span>
+            {/* Tombol hapus akses user */}
             <button 
               onClick={() => handleDeleteUser(item.email)} 
               className="p-3 text-slate-300 hover:text-rose-600 transition-all">
