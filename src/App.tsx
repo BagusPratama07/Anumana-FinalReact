@@ -641,7 +641,7 @@ export default function App() {
                             const preLabel = getProbLabel(log.preRisk);
                             return (
                               <tr key={log.id} className="hover:bg-slate-50 transition-colors group">
-                                <td className="px-6 py-5 text-xs font-bold text-slate-700 whitespace-nowrap">{log.date}</td>
+                                <td className="px-6 py-5 text-xs font-bold text-slate-700 whitespace-nowrap">{String(log.date).split("T")[0]}</td>
                                 <td className="px-6 py-5"><span className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest ${["Fatality", "LTI"].includes(log.category) ? "bg-rose-100 text-rose-600" : ["RWDI", "MTC"].includes(log.category) ? "bg-amber-100 text-amber-600" : "bg-slate-100 text-slate-600"}`}>{log.category}</span></td>
                                 <td className="px-6 py-5"><span className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest border ${preStyle}`}>{log.preRisk}% ({preLabel})</span></td>
                                 <td className="px-6 py-5 text-xs font-medium text-slate-600 min-w-[200px] max-w-sm truncate" title={log.judul}>{log.judul}</td>
