@@ -10,7 +10,7 @@ import {
 // 2. IMPORT IKON ANTARMUKA (LUCIDE-REACT)
 import {
   Zap, Upload, User, LogOut, Plus, Users, Database, History, 
-  ChevronDown, ChevronUp, Filter, AlertTriangle, EyeOff, UserX, ShieldCheck
+  ChevronDown, ChevronUp, Filter, AlertTriangle, EyeOff, UserX, ShieldCheck, Trash2
 } from "lucide-react";
 
 // 3. IMPORT FUNGSI BANTU & DATA HELPER
@@ -568,16 +568,100 @@ export default function App() {
                       const label = getProbLabel(row.prob);
                       return (
                         <tr key={`f-${idx}`} className="hover:bg-slate-50 transition-colors">
-                          <td className="px-10 py-6"><div className="font-black text-slate-800">{row.day}</div><div className="text-[10px] text-slate-400 font-bold">{row.date}</div></td>
-                          <td className="px-10 py-6"><span className={`px-4 py-1.5 rounded-full text-[10px] font-black border uppercase ${style}`}>{label}</span></td>
-                          <td className="px-10 py-6"><span className="font-black text-slate-800 text-xl">{row.prob}%</span></td>
-                          <td className="px-10 py-6"><div className="text-[11px] font-bold text-slate-800 bg-slate-100 inline-block px-2 py-0.5 rounded">Σ = {row.sigma}</div></td>
+                          {/* Kolom 1: Hari & Tanggal */}
+                          <td className="px-10 py-6">
+                            <div className="font-black text-slate-800">{row.day}</div>
+                            <div className="text-[10px] text-slate-400 font-bold">{row.date}</div>
+                          </td>
+                          
+                          {/* Kolom 2: Status Risiko (Label) */}
+                          <td className="px-10 py-6">
+                            <span className={`px-4 py-1.5 rounded-full text-[10px] font-black border uppercase ${style}`}>
+                              {label}
+                            </span>
+                          </td>
+                          
+                          {/* Kolom 3: Probabilitas Akhir (Dengan Bar Animasi) */}
+                          <td className="px-10 py-6">
+                            <div className="flex items-center gap-4">
+                              <span className="font-black text-slate-800 text-xl w-12">{row.prob}%</span>
+                              <div className="w-24 bg-slate-100 h-1.5 rounded-full hidden sm:block overflow-hidden">
+                                <div 
+                                  className={`h-full transition-all duration-500 ${row.prob > 64 ? "bg-rose-500" : row.prob > 36 ? "bg-orange-500" : row.prob > 16 ? "bg-amber-500" : "bg-emerald-500"}`} 
+                                  style={{ width: `${row.prob}%` }}
+                                ></div>
+                              </div>
+                            </div>
+                          </td>
+                          
+                          {/* Kolom 4: Detail Parameter Lengkap (M1-M5 & Sigma) */}
+                          <td className="px-10 py-6">
+                            <div className="text-[11px] font-bold text-slate-800 bg-slate-100 inline-block px-2 py-0.5 rounded mb-1">
+                              Σ = {row.sigma} | Siklus {row.currentCycle} (Hari Ke-{row.effectiveDay})
+                            </div>
+                            <div className="text-[9px] font-medium text-slate-500 uppercase tracking-widest leading-relaxed">
+                              M1 (ED): {row.m1} | M2 (AI): {row.m2} | M3 (CI): {row.m3} <br />
+                              <span className="text-amber-600 font-bold">M4 (HO): {row.m4}</span> | <span className="text-rose-600 font-bold">M5 (PO): {row.m5}</span>
+                            </div>
+                            <div className="text-[9px] font-black text-indigo-500 uppercase tracking-widest mt-1">
+                              FK 1: {row.penaltyScore}% | FK 2: {row.dayScore}%
+                            </div>
+                          </td>
                         </tr>
                       );
                     })}
                   </tbody>
                 </table>
               </div>
+            </div>
+            {/* LOG INSIDEN HISTORIKAL */}
+            <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden mb-12">
+              <div className="p-8 border-b border-slate-50 flex flex-col md:flex-row justify-between items-center bg-slate-50/50 gap-6 cursor-pointer hover:bg-slate-100/50 transition-colors" onClick={() => setIsHistoryOpen(!isHistoryOpen)}>
+                <div className="flex items-center gap-4"><div className="bg-slate-900 p-2.5 rounded-xl text-white"><History className="w-5 h-5" /></div><h3 className="font-black text-slate-800 uppercase tracking-tight text-sm">Log Insiden Historikal ({selectedArea})</h3></div>
+                <div className="flex items-center gap-4"><span className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-3 py-1 bg-white border border-slate-200 rounded-full">{historicalLogs.length} Data Terbaca</span>{isHistoryOpen ? <ChevronUp className="w-5 h-5 text-slate-400" /> : <ChevronDown className="w-5 h-5 text-slate-400" />}</div>
+              </div>
+              {isHistoryOpen && (
+                <div className="p-8 animate-in slide-in-from-top-4 duration-300">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-6">
+                    <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest"><Filter className="w-4 h-4" /> Filter Bulan:</div>
+                    <select className="bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-xl px-4 py-2.5 outline-none focus:border-slate-400 focus:bg-white transition-all cursor-pointer" value={historyMonth} onChange={(e) => setHistoryMonth(e.target.value)}>
+                      <option value="All">Semua Bulan Data</option>
+                      {monthNames.map((m, idx) => (<option key={idx} value={idx}>{m}</option>))}
+                    </select>
+                  </div>
+                  <div className="overflow-x-auto rounded-2xl border border-slate-100">
+                    <table className="w-full text-left">
+                      <thead className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
+                        <tr><th className="px-6 py-4">Tanggal</th><th className="px-6 py-4">Kategori</th><th className="px-6 py-4">Prediksi Pra-Insiden</th><th className="px-6 py-4">Deskripsi Insiden</th><th className="px-6 py-4 text-center">PIT Area</th><th className="px-6 py-4 text-right">Aksi</th></tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-50">
+                        {historicalLogs.length > 0 ? (
+                          historicalLogs.map((log) => {
+                            const preStyle = getProbColor(log.preRisk);
+                            const preLabel = getProbLabel(log.preRisk);
+                            return (
+                              <tr key={log.id} className="hover:bg-slate-50 transition-colors group">
+                                <td className="px-6 py-5 text-xs font-bold text-slate-700 whitespace-nowrap">{log.date}</td>
+                                <td className="px-6 py-5"><span className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest ${["Fatality", "LTI"].includes(log.category) ? "bg-rose-100 text-rose-600" : ["RWDI", "MTC"].includes(log.category) ? "bg-amber-100 text-amber-600" : "bg-slate-100 text-slate-600"}`}>{log.category}</span></td>
+                                <td className="px-6 py-5"><span className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest border ${preStyle}`}>{log.preRisk}% ({preLabel})</span></td>
+                                <td className="px-6 py-5 text-xs font-medium text-slate-600 min-w-[200px] max-w-sm truncate" title={log.judul}>{log.judul}</td>
+                                <td className="px-6 py-5 text-center"><span className="px-3 py-1 bg-white border border-slate-200 rounded-md text-[10px] font-black text-slate-500 uppercase tracking-widest">{log.pit}</span></td>
+                                <td className="px-6 py-5 text-right">
+                                  {user.role === "admin" && (
+                                    <button onClick={() => handleDeleteIncident(log.id)} className="p-2 text-slate-300 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"><Trash2 className="w-4 h-4" /></button>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })
+                        ) : (
+                          <tr><td colSpan="6" className="px-6 py-12 text-center"><div className="flex flex-col items-center justify-center text-slate-400"><Database className="w-8 h-8 mb-3 opacity-20" /><span className="text-xs font-bold uppercase tracking-widest">Tidak ada insiden tercatat pada filter ini.</span></div></td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
             </div>
           </>
         ) : (

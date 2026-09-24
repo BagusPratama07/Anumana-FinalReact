@@ -32,7 +32,7 @@ export default function useAnalytics({
     const today = new Date();
 
     // B. PERHITUNGAN EXPOSURE DAYS (Jarak Hari)
-    // Dapatkan insiden terakhir, hitung sudah berapa hari kita bebas insiden
+    // Dapatkan insiden terakhir, hitung sudah berapa hari bebas insiden
     const lastIncident = sortedForMath[0];
     const absoluteDayCount = lastIncident ? Math.floor((today - parseSafeDate(lastIncident.date)) / (1000 * 60 * 60 * 24)) : 0;
 
