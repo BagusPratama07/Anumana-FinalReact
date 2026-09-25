@@ -292,15 +292,32 @@ export default function App() {
     reader.readAsText(file);
   };
 
-  // FUNGSI INPUT MANUAL INSIDEN
+  // =======================================================================
+  // FUNGSI INPUT MANUAL INSIDEN (DIPERBARUI DENGAN SNAPSHOT DATA HISTORIS)
+  // =======================================================================
   const submitManual = async (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
+    const dateVal = formData.get("date");
+
+    // 1. Snapshot Nilai Prediksi Risiko (Untuk mengunci nilai historis di database)
+    // Mencari ramalan pada tanggal kejadian, jika tidak ada pakai ramalan hari ini (index 0)
+    const targetForecast = analytics.forecast.find(f => f.date === dateVal) || analytics.forecast[0];
+    const frozenRisk = targetForecast ? targetForecast.prob : 5;
+
+    // 2. Siapkan Payload Data Baru
     const newIncident = {
-      id: `in_manual_${Date.now()}`, judul: formData.get("judul"), pit: formData.get("pit"),
-      category: formData.get("category"), date: formData.get("date"), timestamp: Date.now(), type: "incident",
+      id: `in_manual_${Date.now()}`, 
+      judul: formData.get("judul"), 
+      pit: formData.get("pit"),
+      category: formData.get("category"), 
+      date: dateVal, 
+      timestamp: Date.now(), 
+      type: "incident",
+      preRisk: frozenRisk // <-- Menyisipkan skor prediksi ke database secara diam-diam
     };
 
+    // 3. Update Tampilan Lokal dan Kirim ke Google Sheets
     setIncidents((prev) => [newIncident, ...prev].sort((a, b) => parseSafeDate(b.date).getTime() - parseSafeDate(a.date).getTime()));
     setIsEntryModalOpen(false);
     await appendSheetData("incidents", newIncident);
