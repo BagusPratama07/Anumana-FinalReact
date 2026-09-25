@@ -18,9 +18,7 @@ export default function useAnalytics({
   historyMonth
 }) {
   
-  // =====================================================================
   // 1. ANALITIK UTAMA (DASHBOARD & PREDIKSI MASA DEPAN)
-  // =====================================================================
   const analytics = useMemo(() => {
     // A. FILTER DATA BERDASARKAN AREA (PIT)
     const filteredIncidents = selectedArea === "All PIT" ? incidents : incidents.filter((i) => i.pit === selectedArea);
@@ -204,9 +202,7 @@ export default function useAnalytics({
   }, [incidents, hazards, observations, selectedArea, dashboardSummary]);
 
 
-  // =====================================================================
   // 2. ANALITIK HISTORIS (BACKTESTING & TAHAP 3 SNAPSHOT)
-  // =====================================================================
   const historicalLogs = useMemo(() => {
     let data = selectedArea === "All PIT" ? incidents : incidents.filter((i) => i.pit === selectedArea);
     const hazardDataFiltered = selectedArea === "All PIT" ? hazards : hazards.filter((h) => h.pit === selectedArea);
@@ -217,19 +213,15 @@ export default function useAnalytics({
 
     const logsWithPreRisk = data.map((log) => {
       
-      // =================================================================
-      // TAHAP 3: DATA SNAPSHOTTING (BACA DATABASE DULU!)
+      // TAHAP 3: DATA SNAPSHOTTING (BACA DATABASE)
       // Jika nilai 'preRisk' sudah tersimpan dari Google Sheets, langsung gunakan.
       // Ini membekukan sejarah risiko agar 100% akurat dan melompati kalkulasi berat.
-      // =================================================================
       if (log.preRisk !== undefined && log.preRisk !== null && log.preRisk !== "") {
         return { ...log, preRisk: Number(log.preRisk) };
       }
 
-      // -----------------------------------------------------------------
       // JIKA DATA KOSONG (FALLBACK): Hitung mundur secara dinamis
       // (Untuk menyokong insiden-insiden lama sebelum optimisasi ini diterapkan)
-      // -----------------------------------------------------------------
       const targetTime = parseSafeDate(log.date).getTime();
       const pastLogs = data.filter((p) => parseSafeDate(p.date).getTime() < targetTime);
 

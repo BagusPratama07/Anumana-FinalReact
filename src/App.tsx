@@ -292,9 +292,7 @@ export default function App() {
     reader.readAsText(file);
   };
 
-  // =======================================================================
   // FUNGSI INPUT MANUAL INSIDEN (DIPERBARUI DENGAN SNAPSHOT DATA HISTORIS)
-  // =======================================================================
   const submitManual = async (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
