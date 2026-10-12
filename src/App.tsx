@@ -66,11 +66,16 @@ export default function App() {
   useEffect(() => {
     const initApp = async () => {
       setLoading(true);
-      try {
-        const [wData, iData, summaryData] = await Promise.all([
+      try { 
+        // GANTI INI DENGAN URL APPS SCRIPT ANDA YANG SEBENARNYA
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwDx9nOsA1dqWGbtEDKTBrvE4w_icAk3StN_k1EjCe0TfkvrwGapUZVzH3RdIrtjYLz/exec"; 
+
+        // Ambil data secara bersamaan (Parallel Fetch)
+        const [wData, iData, summaryData, analytics7dData] = await Promise.all([
           fetchSheetData("whitelist"),
           fetchSheetData("incidents"),
           fetchSheetData("Dashboard_Summary"),
+          fetch(`${SCRIPT_URL}?action=analytics7d`).then(res => res.json()) // <--- TARIK DARI ENDPOINT BARU
         ]);
 
         setWhitelist(wData);
@@ -81,8 +86,15 @@ export default function App() {
           setDashboardSummary(JSON.parse(rawJsonStr).data);
         }
 
-        setHazards([]); 
-        setObservations([]);
+        // PECAH DATA HAZARD & OBSERVASI DARI HASIL ANALYTICS7D
+        if (analytics7dData && analytics7dData.success) {
+          setHazards(analytics7dData.hazards || []);
+          setObservations(analytics7dData.observations || []);
+        } else {
+          setHazards([]);
+          setObservations([]);
+        }
+
       } catch (e) {
         console.error("Gagal sinkronisasi dengan Spreadsheet", e);
       }
@@ -299,7 +311,6 @@ export default function App() {
     const dateVal = formData.get("date");
 
     // 1. Snapshot Nilai Prediksi Risiko (Untuk mengunci nilai historis di database)
-    // Mencari ramalan pada tanggal kejadian, jika tidak ada pakai ramalan hari ini (index 0)
     const targetForecast = analytics.forecast.find(f => f.date === dateVal) || analytics.forecast[0];
     const frozenRisk = targetForecast ? targetForecast.prob : 5;
 
@@ -315,10 +326,25 @@ export default function App() {
       preRisk: frozenRisk // <-- Menyisipkan skor prediksi ke database secara diam-diam
     };
 
-    // 3. Update Tampilan Lokal dan Kirim ke Google Sheets
+    // 3. Update Tampilan Lokal Seketika
     setIncidents((prev) => [newIncident, ...prev].sort((a, b) => parseSafeDate(b.date).getTime() - parseSafeDate(a.date).getTime()));
     setIsEntryModalOpen(false);
-    await appendSheetData("incidents", newIncident);
+
+    // 4. Kirim Data ke Server (Google Apps Script)
+    try {
+      // GANTI URL DI BAWAH INI DENGAN URL APPS SCRIPT ANDA SEPERTI DI ATAS
+      const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwDx9nOsA1dqWGbtEDKTBrvE4w_icAk3StN_k1EjCe0TfkvrwGapUZVzH3RdIrtjYLz/exec"; 
+      
+      const payload = { ...newIncident, sheet: "incidents" }; 
+      
+      await fetch(SCRIPT_URL, {
+        method: "POST",
+        body: JSON.stringify(payload)
+      });
+      
+    } catch (err) {
+      console.error("Gagal simpan data ke server", err);
+    }
   };
 
   // FUNGSI HAPUS/SEMBUNYIKAN INSIDEN
