@@ -88,8 +88,27 @@ export default function App() {
 
         // PECAH DATA HAZARD & OBSERVASI DARI HASIL ANALYTICS7D
         if (analytics7dData && analytics7dData.success) {
-          setHazards(analytics7dData.hazards || []);
-          setObservations(analytics7dData.observations || []);
+          
+          // NORMALISASI DATA (Mencegah nama kolom sheet bahasa Indonesia gagal terbaca mesin)
+          const normHazards = (analytics7dData.hazards || []).map(h => ({
+            ...h,
+            date: h.date || h["tanggal laporan"] || h.tanggal,
+            pit: h.pit || h.area,
+            resiko: h.resiko || h["resiko temuan"],
+            status: h.status || h["status laporan"],
+            jenis: h.jenis || h["jenis temuan"]
+          }));
+
+          const normObs = (analytics7dData.observations || []).map(o => ({
+            ...o,
+            date: o.date || o["tanggal observasi"] || o.tanggal,
+            pit: o.pit || o.area,
+            temuan: o.temuan !== undefined ? o.temuan : o["jumlah temuan"]
+          }));
+
+          setHazards(normHazards);
+          setObservations(normObs);
+          
         } else {
           setHazards([]);
           setObservations([]);
